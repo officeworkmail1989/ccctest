@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="bn" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Raidighi CCC</title>
+
+    <meta name="theme-color" content="#ff6b6b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Raidighi CCC">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn.aptoide.com/imgs/4/d/8/4d8c88cd950685bd2cf5aa33484f16a8_icon.png">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ── THEME VARIABLES ── */
+        :root {
+            --bg: #f7f9ff;
+            --top-bar-from: #ff6b6b;
+            --top-bar-to: #4d96ff;
+            --text-on-bar: #fff;
+            --net-online: #00b894;
+            --net-offline: #e17055;
+            --offline-bg: #1a1a2e;
+            --offline-card: #16213e;
+            --fab-bg: rgba(255,255,255,0.18);
+        }
+        [data-theme="dark"] {
+            --bg: #0f0f1a;
+            --top-bar-from: #1a1a2e;
+            --top-bar-to: #16213e;
+        }
+
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            transition: background 0.3s;
+        }
+
+        #app { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; }
+
+        /* ── TOP BAR ── */
+        #top-bar {
+            position: fixed; top: 0; left: 0; right: 0;
+            height: 48px;
+            background: linear-gradient(90deg, var(--top-bar-from), #ffd93d 45%, #6bcb77 70%, var(--top-bar-to));
+            display: flex; align-items: center;
+            padding: 0 14px;
+            z-index: 8000;
+            gap: 10px;
+        }
+        #top-bar-title { flex: 1; font-size: 16px; font-weight: 700; color: #fff; }
+        .top-btn {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            border: 1.5px solid rgba(255,255,255,0.35);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 17px;
+            transition: background 0.2s, transform 0.15s;
+            flex-shrink: 0;
+        }
+        .top-btn:hover  { background: rgba(255,255,255,0.35); }
+        .top-btn:active { transform: scale(0.9); }
+
+        #live-badge {
+            display: flex; align-items: center; gap: 5px;
+            border-radius: 20px; padding: 4px 9px;
+            background: rgba(0,0,0,0.28);
+            transition: background 0.4s;
+        }
+        #live-badge.offline-mode { background: rgba(200,40,40,0.45); }
+        #live-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #00ff88;
+            transition: background 0.4s;
+        }
+        #live-badge.offline-mode #live-dot {
+            background: #ff6b6b;
+            animation: none;
+        }
+        #live-label { font-size: 10px; font-weight: 700; color: #fff; letter-spacing: 0.8px; }
+
+        /* ── IFRAME ── */
+        #gas-portal {
+            border: none; width: 100%; flex: 1;
+            margin-top: 48px;
+            background: #fff;
+            transition: filter 0.3s;
+        }
+        [data-theme="dark"] #gas-portal { filter: invert(0.92) hue-rotate(180deg); }
+
+        /* ── SPLASH SCREEN ── */
+        #splash {
+            position: fixed; inset: 0;
+            background: linear-gradient(145deg, #ff6b6b 0%, #ffd93d 38%, #6bcb77 68%, #4d96ff 100%);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.55s ease, transform 0.55s ease;
+        }
+        #splash.fade-out { opacity: 0; transform: scale(1.04); pointer-events: none; }
+        .s-logo-ring {
+            width: 96px; height: 96px; border-radius: 26px;
+            background: rgba(255,255,255,0.22);
+            border: 2.5px solid rgba(255,255,255,0.55);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 22px;
+            animation: logoPop 2.2s ease-in-out infinite;
+        }
+        .s-logo-text { font-size: 36px; font-weight: 800; color: #fff; letter-spacing: -1px; }
+        .s-name { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 6px; animation: fadeUp 0.6s 0.15s both; }
+        .s-sub  { font-size: 14px; color: rgba(255,255,255,0.88); margin-bottom: 34px; animation: fadeUp 0.6s 0.3s both; }
+        .s-progress-track { width: 200px; height: 6px; background: rgba(255,255,255,0.28); border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+        .s-progress-bar   { height: 100%; width: 0%; background: #fff; border-radius: 10px; transition: width 0.12s linear; }
+        .s-pct { font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 600; }
+
+        /* ── OFFLINE FALLBACK PAGE ── */
+        #offline-page {
+            display: none;
+            position: fixed; inset: 0;
+            background: var(--offline-bg);
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 7000;
+            animation: fadeUp 0.4s ease;
+        }
+        #offline-page.show { display: flex; }
+        .offline-icon { font-size: 64px; margin-bottom: 16px; animation: pulse 2s ease-in-out infinite; }
+        .offline-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+        .offline-sub   { font-size: 14px; color: rgba(255,255,255,0.6); text-align: center; margin-bottom: 32px; line-height: 1.6; }
+        .offline-retry {
+            padding: 13px 32px; border-radius: 50px;
+            background: linear-gradient(90deg, #ff6b6b, #ffd93d);
+            color: #fff; font-size: 14px; font-weight: 700;
+            border: none; cursor: pointer;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        .offline-dots { display: flex; gap: 8px; margin-top: 40px; }
+        .offline-dots span {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            animation: blink 1.4s ease-in-out infinite;
+        }
+        .offline-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .offline-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        /* ── NOTIFICATION TOAST ── */
+        #notif-toast {
+            position: fixed; top: 84px; left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: #1a1a2e; color: #fff;
+            padding: 10px 18px; border-radius: 12px;
+            font-size: 13px; font-weight: 600;
+            z-index: 9998; opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        #notif-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── PWA INSTALL BANNER ── */
+        #install-banner {
+            display: none;
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 28px); max-width: 420px;
+            background: #fff;
+            border-radius: 18px;
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 14px 40px rgba(0,0,0,0.13);
+            padding: 16px; z-index: 9990;
+            animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1);
+        }
+        [data-theme="dark"] #install-banner { background: #16213e; border-color: rgba(255,255,255,0.08); }
+        .ib-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+        .ib-icon { width: 50px; height: 50px; border-radius: 14px; background: linear-gradient(135deg,#ff6b6b,#ffd93d); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+        .ib-title { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 3px; }
+        .ib-desc  { font-size: 12px; color: #636e72; line-height: 1.45; }
+        [data-theme="dark"] .ib-title { color: #fff; }
+        [data-theme="dark"] .ib-desc  { color: rgba(255,255,255,0.6); }
+        .ib-btns { display: flex; justify-content: flex-end; gap: 9px; }
+        .ib-btn  { padding: 9px 18px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; }
+        .ib-later { background: #f1f3f5; color: #555; }
+        .ib-now   { background: linear-gradient(135deg,#ff6b6b,#ffd93d); color: #fff; }
+
+        #live-dot.online-pulse { animation: blink 1.2s ease-in-out infinite; }
+
+        /* ── KEYFRAMES ── */
+        @keyframes blink   { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.25;transform:scale(0.8)} }
+        @keyframes logoPop { 0%,100%{transform:scale(1)} 50%{transform:scale(1.07)} }
+        @keyframes fadeUp  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes slideUp { from{transform:translate(-50%,80px);opacity:0} to{transform:translate(-50%,0);opacity:1} }
+        @keyframes pulse   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <!-- Top Bar -->
+    <div id="top-bar">
+        <span id="top-bar-title">Raidighi CCC</span>
+
+        <!-- Live / Offline Badge -->
+        <div id="live-badge">
+            <div id="live-dot" class="online-pulse"></div>
+            <span id="live-label">LIVE</span>
+        </div>
+
+        <!-- Share Button -->
+        <div class="top-btn" onclick="doShare()" title="শেয়ার করুন">🔗</div>
+
+        <!-- Dark Mode Toggle -->
+        <div class="top-btn" id="theme-btn" onclick="toggleTheme()" title="Dark / Light Mode">🌙</div>
+    </div>
+
+    <!-- iFrame -->
+    <iframe
+        id="gas-portal"
+        src="https://script.google.com/macros/s/AKfycbwCy-JMyk7nCX-NzBPGH1KeZz70DdLnzDXJCl33z8wQk9nTZGCqRkSrGPZ4w4w9APCi7g/exec"
+        allow="camera; microphone; geolocation"
+        title="Raidighi CCC Portal">
+    </iframe>
+
+    <!-- Splash Screen -->
+    <div id="splash">
+        <div class="s-logo-ring"><span class="s-logo-text">RC</span></div>
+        <div class="s-name">Raidighi CCC</div>
+        <div class="s-sub">Connecting To Server…</div>
+        <div class="s-progress-track">
+            <div class="s-progress-bar" id="prog-bar"></div>
+        </div>
+        <div class="s-pct" id="prog-pct">0%</div>
+    </div>
+
+    <!-- Offline Fallback Page -->
+    <div id="offline-page">
+        <div class="offline-icon">📡</div>
+        <div class="offline-title">ইন্টারনেট নেই!</div>
+        <div class="offline-sub">আপনার নেটওয়ার্ক সংযোগ পাওয়া যাচ্ছে না।<br>WiFi বা Mobile Data চালু করে চেষ্টা করুন।</div>
+        <button class="offline-retry" onclick="retryConnection()">🔄 আবার চেষ্টা করুন</button>
+        <div class="offline-dots"><span></span><span></span><span></span></div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notif-toast">🔔 Notification চালু হয়েছে!</div>
+
+    <!-- Install Banner -->
+    <div id="install-banner">
+        <div class="ib-row">
+            <div class="ib-icon">📲</div>
+            <div>
+                <div class="ib-title">Raidighi CCC ইনস্টল করুন</div>
+                <div class="ib-desc">হোম স্ক্রিনে রাখুন — যেকোনো সময় এক ক্লিকে খুলুন</div>
+            </div>
+        </div>
+        <div class="ib-btns">
+            <button class="ib-btn ib-later" onclick="dismissBanner()">পরে করব</button>
+            <button class="ib-btn ib-now"   onclick="triggerInstall()">এখনই ইনস্টল</button>
+        </div>
+    </div>
+
+</div>
+<script>
+/* ── SERVICE WORKER ── */
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => {
+                console.log('[PWA] SW registered');
+                window._swReg = reg;
+            })
+            .catch(e => console.warn('[PWA] SW failed:', e));
+    });
+}
+
+/* ── SPLASH PROGRESS BAR ── */
+const progBar = document.getElementById('prog-bar');
+const progPct = document.getElementById('prog-pct');
+const splash  = document.getElementById('splash');
+let pct = 0;
+const tick = setInterval(() => {
+    pct += Math.random() * 14 + 4;
+    if (pct >= 100) { pct = 100; clearInterval(tick); }
+    progBar.style.width = pct + '%';
+    progPct.textContent = Math.round(pct) + '%';
+}, 180);
+
+function hideSplash() {
+    if (!splash.classList.contains('fade-out')) {
+        pct = 100; progBar.style.width = '100%'; progPct.textContent = '100%';
+        clearInterval(tick);
+        setTimeout(() => splash.classList.add('fade-out'), 300);
+    }
+}
+document.getElementById('gas-portal').addEventListener('load', hideSplash);
+setTimeout(hideSplash, 6000);
+
+/* ── DARK MODE ── */
+const html     = document.documentElement;
+const themeBtn = document.getElementById('theme-btn');
+let isDark = localStorage.getItem('theme') === 'dark';
+
+function applyTheme() {
+    html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    themeBtn.textContent = isDark ? '☀️' : '🌙';
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+function toggleTheme() { isDark = !isDark; applyTheme(); }
+applyTheme();
+
+/* ── NATIVE SHARE ── */
+function doShare() {
+    const shareData = {
+        title: 'Raidighi CCC',
+        text: 'Raidighi CCC Portal — সবার সাথে শেয়ার করুন!',
+        url: window.location.href
+    };
+    if (navigator.share) {
+        navigator.share(shareData).catch(() => {});
+    } else {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            showToast('🔗 Link copied to clipboard!');
+        }).catch(() => {
+            showToast('📋 Link: ' + window.location.href);
+        });
+    }
+}
+
+
+function showToast(msg) {
+    const t = document.getElementById('notif-toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ── NETWORK STATUS → LIVE BADGE ── */
+const liveBadge = document.getElementById('live-badge');
+const liveDot   = document.getElementById('live-dot');
+const liveLabel = document.getElementById('live-label');
+const offPage   = document.getElementById('offline-page');
+
+function updateNet() {
+    if (navigator.onLine) {
+        liveBadge.classList.remove('offline-mode');
+        liveDot.classList.add('online-pulse');
+        liveDot.style.background = '#00ff88';
+        liveLabel.textContent = 'LIVE';
+        offPage.classList.remove('show');
+    } else {
+        liveBadge.classList.add('offline-mode');
+        liveDot.classList.remove('online-pulse');
+        liveDot.style.background = '#ff6b6b';
+        liveLabel.textContent = 'OFFLINE';
+        offPage.classList.add('show');
+    }
+}
+function retryConnection() {
+    if (navigator.onLine) { offPage.classList.remove('show'); document.getElementById('gas-portal').src += ''; }
+    else {
+        const btn = offPage.querySelector('.offline-retry');
+        btn.textContent = '⏳ চেক করছি…';
+        setTimeout(() => { btn.textContent = '🔄 আবার চেষ্টা করুন'; updateNet(); }, 2000);
+    }
+}
+window.addEventListener('online',  updateNet);
+window.addEventListener('offline', updateNet);
+updateNet();
+
+/* ── PWA INSTALL BANNER ── */
+const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    navigator.standalone === true ||
+    document.referrer.includes('android-app://') ||
+    localStorage.getItem('pwa_installed') === 'true';
+
+let deferredPrompt = null;
+const banner = document.getElementById('install-banner');
+
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferredPrompt = e;
+    if (!isStandalone) showBanner();
+});
+if (!isStandalone) setTimeout(showBanner, 3000);
+
+function showBanner() {
+    if (!sessionStorage.getItem('banner_dismissed') && !isStandalone)
+        banner.style.display = 'block';
+}
+function dismissBanner() {
+    banner.style.display = 'none';
+    sessionStorage.setItem('banner_dismissed', 'true');
+}
+function triggerInstall() {
+    if (deferredPrompt) {
+        dismissBanner(); deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(r => {
+            if (r.outcome === 'accepted') localStorage.setItem('pwa_installed', 'true');
+            deferredPrompt = null;
+        });
+        return;
+    }
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+        alert("📲 iOS-এ ইনস্টল:\n\n১. Safari-এর Share বোতামে ট্যাপ করুন\n২. 'Add to Home Screen' সিলেক্ট করুন\n৩. 'Add' চাপুন");
+    } else {
+        alert("📲 ইনস্টল:\n\n১. ব্রাউজারের ৩টি ডট মেনুতে ক্লিক করুন\n২. 'Install app' বা 'Add to Home screen' চাপুন");
+    }
+}
+window.addEventListener('appinstalled', () => {
+    localStorage.setItem('pwa_installed', 'true'); dismissBanner();
+});
+</script>
+</body>
+</html>
