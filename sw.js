@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raidighi-ccc-v5';
+const CACHE_NAME = 'raidighi-ccc-v6';
 const ASSETS = ['index.html', 'manifest.json', 'offline.html'];
 
 const OFFLINE_HTML = `<!DOCTYPE html>
@@ -47,6 +47,21 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
     if (e.request.method !== 'GET') return;
     const url = new URL(e.request.url);
+
+    // notices.json — সবসময় নেটওয়ার্ক থেকে আনো (cache-busting সহ)
+    // যাতে admin আপডেট করলে ইউজাররা তাৎক্ষণিক পায়
+    if (url.pathname.endsWith('notices.json')) {
+        e.respondWith(
+            fetch(e.request)
+                .then(resp => {
+                    const clone = resp.clone();
+                    caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+                    return resp;
+                })
+                .catch(() => caches.match('notices.json'))
+        );
+        return;
+    }
 
     if (url.origin === self.location.origin) {
         e.respondWith(
