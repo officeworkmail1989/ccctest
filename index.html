@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="bn" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Raidighi CCC</title>
+
+    <meta name="theme-color" content="#ff6b6b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Raidighi CCC">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn.aptoide.com/imgs/4/d/8/4d8c88cd950685bd2cf5aa33484f16a8_icon.png">
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #f7f9ff;
+            --top-bar-from: #ff6b6b;
+            --top-bar-to: #4d96ff;
+            --net-online: #00b894;
+            --net-offline: #e17055;
+            --offline-bg: #1a1a2e;
+        }
+        [data-theme="dark"] {
+            --bg: #0f0f1a;
+            --top-bar-from: #1a1a2e;
+            --top-bar-to: #16213e;
+        }
+
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            transition: background 0.3s;
+        }
+
+        #app { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; }
+
+        #top-bar {
+            position: fixed; top: 0; left: 0; right: 0;
+            height: 56px;
+            background: linear-gradient(90deg, var(--top-bar-from), #ffd93d 45%, #6bcb77 70%, var(--top-bar-to));
+            display: flex; align-items: center;
+            padding: 0 14px;
+            z-index: 8000;
+            gap: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        }
+        #top-bar-title { font-size: 17px; font-weight: 700; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        #top-bar-left { display: flex; align-items: center; gap: 8px; flex: 1; }
+        
+        .top-btn {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(255,255,255,0.22);
+            border: 1.5px solid rgba(255,255,255,0.4);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 17px;
+            transition: background 0.2s, transform 0.15s;
+            color: #fff;
+        }
+        .top-btn:hover  { background: rgba(255,255,255,0.35); transform: translateY(-1px); }
+
+        #live-badge { display: flex; align-items: center; gap: 4px; }
+        #live-dot { width: 8px; height: 8px; border-radius: 50%; background: #00ff88; }
+        #live-label { font-size: 10px; font-weight: 700; color: #fff; }
+
+        #gas-portal {
+            border: none; width: 100%; flex: 1;
+            margin-top: 56px;
+            background: #fff;
+        }
+
+        #splash {
+            position: fixed; inset: 0;
+            background: linear-gradient(145deg, #ff6b6b 0%, #ffd93d 38%, #6bcb77 68%, #4d96ff 100%);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.55s ease, transform 0.55s ease;
+        }
+        #splash.fade-out { opacity: 0; pointer-events: none; }
+        .s-logo-ring {
+            width: 96px; height: 96px; border-radius: 26px;
+            background: rgba(255,255,255,0.22);
+            border: 2.5px solid rgba(255,255,255,0.55);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 22px;
+        }
+        .s-logo-text { font-size: 32px; font-weight: 800; color: #fff; }
+        .s-name { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+        .s-sub  { font-size: 14px; color: rgba(255,255,255,0.9); margin-bottom: 30px; }
+        .s-progress-track { width: 200px; height: 6px; background: rgba(255,255,255,0.28); border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+        .s-progress-bar   { height: 100%; width: 0%; background: #fff; border-radius: 10px; transition: width 0.12s linear; }
+
+        #offline-page {
+            display: none; position: fixed; inset: 0;
+            background: var(--offline-bg);
+            flex-direction: column; align-items: center; justify-content: center;
+            z-index: 7000; color: #fff;
+        }
+        #offline-page.show { display: flex; }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <!-- Top Bar -->
+    <div id="top-bar">
+        <div id="top-bar-left">
+            <span id="top-bar-title">Raidighi CCC</span>
+            <div id="live-badge">
+                <div id="live-dot"></div>
+                <span id="live-label">LIVE</span>
+            </div>
+        </div>
+
+        <div class="top-btn" id="theme-btn" onclick="toggleTheme()" title="থিম পরিবর্তন">🌙</div>
+        <div class="top-btn" id="share-btn" onclick="doShare()" title="শেয়ার করুন">🔗</div>
+        <div class="top-btn" id="reset-btn" onclick="hardReset()" title="রিসেট">⟳</div>
+    </div>
+
+    <!-- Main iFrame -->
+    <iframe id="gas-portal" allow="camera; microphone; geolocation" title="Raidighi CCC Portal"></iframe>
+
+    <!-- Welcome / Google Sign-in Screen -->
+    <div id="welcome-screen" style="display:none; position:fixed; inset:0; z-index:9997; background:#08090d; flex-direction:column; align-items:center; justify-content:center; padding:28px; text-align:center;">
+        <div style="font-size:56px; margin-bottom:14px;">👋</div>
+        <div style="color:#f4f4f5; font-size:20px; font-weight:700; margin-bottom:10px;">স্বাগতম!</div>
+        <div style="color:rgba(244,244,245,0.6); font-size:13.5px; line-height:1.7; max-width:340px; margin-bottom:24px;">
+            Raidighi CCC পোর্টাল ব্যবহারের জন্য আপনার Google Account দিয়ে Sign in করুন।
+        </div>
+        <div id="gsi-button-container"></div>
+    </div>
+
+    <!-- Splash Screen -->
+    <div id="splash">
+        <div class="s-logo-ring"><span class="s-logo-text">CCC</span></div>
+        <div class="s-name">Raidighi CCC</div>
+        <div class="s-sub">Connecting...</div>
+        <div class="s-progress-track">
+            <div class="s-progress-bar" id="prog-bar"></div>
+        </div>
+        <div class="s-pct" id="prog-pct" style="color:#fff; font-size:12px;">0%</div>
+    </div>
+
+    <!-- Offline Fallback -->
+    <div id="offline-page">
+        <div style="font-size:56px; margin-bottom:16px;">📡</div>
+        <h2 style="margin-bottom:8px;">ইন্টারনেট নেই!</h2>
+        <p style="color:#aaa; margin-bottom:24px;">আপনার ইন্টারনেট সংযোগ পরীক্ষা করে পুনরায় চেষ্টা করুন।</p>
+        <button style="padding:12px 28px; border-radius:50px; border:none; background:#ff6b6b; color:#fff; font-weight:bold; cursor:pointer;" onclick="location.reload()">🔄 আবার চেষ্টা করুন</button>
+    </div>
+
+</div>
+
+<script>
+const GOOGLE_CLIENT_ID = "901465315065-ijdbutl4tf91dd0p9roj4621kpeiqte3.apps.googleusercontent.com";
+// আপনার Raidighi CCC এর ডিপ্লয় করা Google Apps Script Exec URL দিন:
+const IFRAME_SRC = "https://script.google.com/macros/s/AKfycby3OefusgFOKOwW5r_aaYdfWedqWAZDcowkQmGpZcgGYIbioLwCsLa-qjlllvKTKiw/exec";
+
+function decodeJWT(token) {
+    try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const json = decodeURIComponent(atob(base64).split('').map(
+            c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join(''));
+        return JSON.parse(json);
+    } catch (e) { return null; }
+}
+
+function loadAppWithToken(token) {
+    document.getElementById('welcome-screen').style.display = 'none';
+    document.getElementById('splash').style.display = 'flex';
+    document.getElementById('splash').classList.remove('fade-out');
+    document.getElementById('gas-portal').src = IFRAME_SRC + '?token=' + encodeURIComponent(token);
+    initSplashProgress();
+}
+
+function handleCredentialResponse(response) {
+    const payload = decodeJWT(response.credential);
+    try {
+        localStorage.setItem('gsiToken', response.credential);
+        if (payload) {
+            if (payload.exp)   localStorage.setItem('gsiTokenExp', payload.exp);
+            if (payload.email) localStorage.setItem('gsiEmail', payload.email);
+        }
+    } catch (e) {}
+    loadAppWithToken(response.credential);
+}
+
+function showSignInScreen() {
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('welcome-screen').style.display = 'flex';
+}
+
+function checkRegistration() {
+    try {
+        const savedToken = localStorage.getItem('gsiToken');
+        const savedExp   = parseInt(localStorage.getItem('gsiTokenExp') || '0', 10);
+        if (savedToken && savedExp && (savedExp - 300) > (Date.now() / 1000)) {
+            loadAppWithToken(savedToken);
+            return;
+        }
+    } catch (e) {}
+
+    if (typeof google === 'undefined' || !google.accounts) {
+        setTimeout(checkRegistration, 300);
+        return;
+    }
+
+    let savedEmail = null;
+    try { savedEmail = localStorage.getItem('gsiEmail'); } catch (e) {}
+
+    const config = {
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+        auto_select: true,
+        itp_support: true
+    };
+    if (savedEmail) config.login_hint = savedEmail;
+
+    google.accounts.id.initialize(config);
+    google.accounts.id.renderButton(
+        document.getElementById('gsi-button-container'),
+        { theme: 'filled_blue', size: 'large', width: 280, text: 'signin_with' }
+    );
+
+    google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            showSignInScreen();
+        }
+    });
+
+    setTimeout(() => {
+        const portal = document.getElementById('gas-portal');
+        if (!portal.src) showSignInScreen();
+    }, 4000);
+}
+
+/* ── PROGRESS BAR ── */
+let pct = 0, tick = null;
+function initSplashProgress() {
+    pct = 0;
+    clearInterval(tick);
+    tick = setInterval(() => {
+        pct += Math.random() * 15 + 5;
+        if (pct >= 100) { pct = 100; clearInterval(tick); }
+        document.getElementById('prog-bar').style.width = pct + '%';
+        document.getElementById('prog-pct').textContent = Math.round(pct) + '%';
+    }, 180);
+    setTimeout(hideSplash, 6000);
+}
+
+function hideSplash() {
+    const s = document.getElementById('splash');
+    if (!s.classList.contains('fade-out')) {
+        clearInterval(tick);
+        document.getElementById('prog-bar').style.width = '100%';
+        setTimeout(() => s.classList.add('fade-out'), 300);
+    }
+}
+document.getElementById('gas-portal').addEventListener('load', hideSplash);
+
+checkRegistration();
+
+/* ── THEME, SHARE & RESET ── */
+function toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', cur);
+}
+function doShare() {
+    if (navigator.share) {
+        navigator.share({ title: 'Raidighi CCC', url: window.location.href });
+    } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('লিংক কপি করা হয়েছে!');
+    }
+}
+function hardReset() {
+    if (confirm('ক্যাশে মুছে নতুন করে লোড করতে চান?')) {
+        localStorage.clear();
+        sessionStorage.clear();
+        location.reload(true);
+    }
+}
+window.addEventListener('online', () => document.getElementById('offline-page').classList.remove('show'));
+window.addEventListener('offline', () => document.getElementById('offline-page').classList.add('show'));
+</script>
+</body>
+</html>
