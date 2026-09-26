@@ -105,6 +105,32 @@
         }
         #offline-page.show { display: flex; }
 
+        /* ── PWA INSTALL BANNER ── */
+        #install-banner {
+            display: none;
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 28px); max-width: 420px;
+            background: #fff;
+            border-radius: 18px;
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 14px 40px rgba(0,0,0,0.13);
+            padding: 16px; z-index: 9990;
+            animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1);
+        }
+        [data-theme="dark"] #install-banner { background: #16213e; border-color: rgba(255,255,255,0.08); }
+        .ib-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+        .ib-icon { width: 50px; height: 50px; border-radius: 14px; background: linear-gradient(135deg,#ff6b6b,#ffd93d); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+        .ib-title { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 3px; }
+        .ib-desc  { font-size: 12px; color: #636e72; line-height: 1.45; }
+        [data-theme="dark"] .ib-title { color: #fff; }
+        [data-theme="dark"] .ib-desc  { color: rgba(255,255,255,0.6); }
+        .ib-btns { display: flex; justify-content: flex-end; gap: 9px; }
+        .ib-btn  { padding: 9px 18px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; }
+        .ib-later { background: #f1f3f5; color: #555; }
+        .ib-now   { background: linear-gradient(135deg,#ff6b6b,#ffd93d); color: #fff; }
+
+
         /* ── HEADER ICON ENHANCEMENTS (from index 1) ── */
         .top-btn:active { transform: scale(0.9); }
         .top-btn.whatsapp-brand-btn {
@@ -200,6 +226,21 @@
     <!-- Notification Toast -->
     <div id="notif-toast" role="status" aria-live="polite"></div>
 
+    <!-- Install Banner -->
+    <div id="install-banner">
+        <div class="ib-row">
+            <div class="ib-icon">📲</div>
+            <div>
+                <div class="ib-title">Raidighi CCC ইনস্টল করুন</div>
+                <div class="ib-desc">হোম স্ক্রিনে রাখুন — যেকোনো সময় এক ক্লিকে খুলুন</div>
+            </div>
+        </div>
+        <div class="ib-btns">
+            <button class="ib-btn ib-later" onclick="dismissBanner()">Cancel</button>
+            <button class="ib-btn ib-now"   onclick="triggerInstall()">Install</button>
+        </div>
+    </div>
+
     <!-- Splash Screen -->
     <div id="splash">
         <div class="s-logo-ring"><span class="s-logo-text">RDG</span></div>
@@ -222,6 +263,18 @@
 </div>
 
 <script>
+/* ── SERVICE WORKER ── */
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => {
+                console.log('[PWA] SW registered');
+                window._swReg = reg;
+            })
+            .catch(e => console.warn('[PWA] SW failed:', e));
+    });
+}
+
 const GOOGLE_CLIENT_ID = "93037108472-dtqhchi63i06k7d8gst8mr1puep3c61t.apps.googleusercontent.com";
 // আপনার Raidighi CCC এর ডিপ্লয় করা Google Apps Script Exec URL দিন:
 const IFRAME_SRC = "https://script.google.com/macros/s/AKfycby3OefusgFOKOwW5r_aaYdfWedqWAZDcowkQmGpZcgGYIbioLwCsLa-qjlllvKTKiw/exec";
@@ -406,6 +459,50 @@ function showToast(msg) {
 
 window.addEventListener('online', () => document.getElementById('offline-page').classList.remove('show'));
 window.addEventListener('offline', () => document.getElementById('offline-page').classList.add('show'));
+
+/* ── PWA INSTALL BANNER ── */
+const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    navigator.standalone === true ||
+    document.referrer.includes('android-app://') ||
+    localStorage.getItem('pwa_installed') === 'true';
+
+let deferredPrompt = null;
+const banner = document.getElementById('install-banner');
+
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferredPrompt = e;
+    if (!isStandalone) showBanner();
+});
+if (!isStandalone) setTimeout(showBanner, 3000);
+
+function showBanner() {
+    if (!sessionStorage.getItem('banner_dismissed') && !isStandalone)
+        banner.style.display = 'block';
+}
+function dismissBanner() {
+    banner.style.display = 'none';
+    sessionStorage.setItem('banner_dismissed', 'true');
+}
+function triggerInstall() {
+    if (deferredPrompt) {
+        dismissBanner(); deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(r => {
+            if (r.outcome === 'accepted') localStorage.setItem('pwa_installed', 'true');
+            deferredPrompt = null;
+        });
+        return;
+    }
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+        alert("📲 iOS-এ ইনস্টল:\n\n১. Safari-এর Share বোতামে ট্যাপ করুন\n২. 'Add to Home Screen' সিলেক্ট করুন\n৩. 'Add' চাপুন");
+    } else {
+        alert("📲 ইনস্টল:\n\n১. ব্রাউজারের ৩টি ডট মেনুতে ক্লিক করুন\n২. 'Install app' বা 'Add to Home screen' চাপুন");
+    }
+}
+window.addEventListener('appinstalled', () => {
+    localStorage.setItem('pwa_installed', 'true'); dismissBanner();
+});
 </script>
 </body>
 </html>
