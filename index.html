@@ -99,11 +99,40 @@
 
         #offline-page {
             display: none; position: fixed; inset: 0;
-            background: var(--offline-bg);
+            background: linear-gradient(145deg, rgba(9,14,28,0.98), rgba(22,33,62,0.98));
             flex-direction: column; align-items: center; justify-content: center;
-            z-index: 7000; color: #fff;
+            z-index: 10001; color: #fff;
+            padding: 24px; text-align: center;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
         #offline-page.show { display: flex; }
+        #gas-portal.offline-hidden { display: none !important; }
+        .offline-card {
+            width: min(92vw, 390px);
+            padding: 30px 24px 26px;
+            border-radius: 24px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+        }
+        .offline-icon {
+            width: 76px; height: 76px; margin: 0 auto 18px;
+            border-radius: 22px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 40px;
+            background: rgba(255,107,107,0.14);
+            border: 1px solid rgba(255,107,107,0.25);
+        }
+        .offline-title { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+        .offline-sub { color: rgba(255,255,255,0.72); font-size: 14px; line-height: 1.7; margin-bottom: 22px; }
+        .offline-retry {
+            width: 100%; padding: 12px 20px; border-radius: 14px;
+            border: 0; cursor: pointer;
+            background: linear-gradient(90deg, #ff6b6b, #ffd93d);
+            color: #fff; font-size: 14px; font-weight: 800;
+            box-shadow: 0 8px 22px rgba(255,107,107,0.25);
+        }
 
         /* ── HEADER ICON ENHANCEMENTS (from index 1) ── */
         .top-btn:active { transform: scale(0.9); }
@@ -212,11 +241,13 @@
     </div>
 
     <!-- Offline Fallback -->
-    <div id="offline-page">
-        <div style="font-size:56px; margin-bottom:16px;">📡</div>
-        <h2 style="margin-bottom:8px;">ইন্টারনেট নেই!</h2>
-        <p style="color:#aaa; margin-bottom:24px;">আপনার ইন্টারনেট সংযোগ পরীক্ষা করে পুনরায় চেষ্টা করুন।</p>
-        <button style="padding:12px 28px; border-radius:50px; border:none; background:#ff6b6b; color:#fff; font-weight:bold; cursor:pointer;" onclick="location.reload()">🔄 আবার চেষ্টা করুন</button>
+    <div id="offline-page" aria-live="assertive" aria-label="ইন্টারনেট সংযোগ বন্ধ">
+        <div class="offline-card">
+            <div class="offline-icon">📡</div>
+            <div class="offline-title">ইন্টারনেট সংযোগ নেই</div>
+            <div class="offline-sub">এই মুহূর্তে ইন্টারনেট বন্ধ আছে।<br>ইন্টারনেট চালু করে পরে আবার চেষ্টা করুন।</div>
+            <button class="offline-retry" onclick="retryConnection()">🔄 আবার চেষ্টা করুন</button>
+        </div>
     </div>
 
 </div>
@@ -329,7 +360,63 @@ function hideSplash() {
 }
 document.getElementById('gas-portal').addEventListener('load', hideSplash);
 
-checkRegistration();
+/* ── INTERNET / OFFLINE GUARD ── */
+const portal = document.getElementById('gas-portal');
+const offlinePage = document.getElementById('offline-page');
+const liveBadge = document.getElementById('live-badge');
+const liveDot = document.getElementById('live-dot');
+const liveLabel = document.getElementById('live-label');
+
+function setOfflineState() {
+    clearInterval(tick);
+    portal.classList.add('offline-hidden');
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('welcome-screen').style.display = 'none';
+    offlinePage.classList.add('show');
+
+    if (liveBadge) liveBadge.classList.add('offline-mode');
+    if (liveDot) {
+        liveDot.classList.remove('online-pulse');
+        liveDot.style.background = '#ff6b6b';
+    }
+    if (liveLabel) liveLabel.textContent = 'OFFLINE';
+}
+
+function setOnlineState() {
+    offlinePage.classList.remove('show');
+    portal.classList.remove('offline-hidden');
+
+    if (liveBadge) liveBadge.classList.remove('offline-mode');
+    if (liveDot) {
+        liveDot.classList.add('online-pulse');
+        liveDot.style.background = '#00ff88';
+    }
+    if (liveLabel) liveLabel.textContent = 'LIVE';
+
+    const currentSrc = portal.getAttribute('src');
+    if (currentSrc) {
+        portal.src = currentSrc;
+    } else {
+        checkRegistration();
+    }
+}
+
+function retryConnection() {
+    if (!navigator.onLine) {
+        showToast('📡 ইন্টারনেট এখনও বন্ধ আছে। পরে আবার চেষ্টা করুন।');
+        return;
+    }
+    setOnlineState();
+}
+
+window.addEventListener('offline', setOfflineState);
+window.addEventListener('online', setOnlineState);
+
+if (navigator.onLine) {
+    checkRegistration();
+} else {
+    setOfflineState();
+}
 
 /* ── HEADER ACTIONS: WHATSAPP, SHARE & HARD RESET ── */
 const resetBtn = document.getElementById('reset-btn');
@@ -404,8 +491,6 @@ function showToast(msg) {
     window.__toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-window.addEventListener('online', () => document.getElementById('offline-page').classList.remove('show'));
-window.addEventListener('offline', () => document.getElementById('offline-page').classList.add('show'));
 </script>
 </body>
 </html>
